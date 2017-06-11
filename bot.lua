@@ -192,6 +192,25 @@ function sendtobot()
     end
 end
 
+function addBots(chat_id)
+    local Botscount = tablelength(apiBots)
+    local i = 0
+    while i < Botscount do
+        tdcli_function ({
+            ID = "AddChatMember",
+            chat_id_ = chat_id,
+            user_id_ = apiBots[i]["ChatId"],
+            forward_limit_ =  50
+        }, dl_cb, nil)
+    end
+end
+
+function tablelength(T)
+    local count = 0
+    for _ in pairs(T) do count = count + 1 end
+    return count
+end
+
 function send(chat_id, msg_id, text)
     tdcli_function ({
         ID = "SendChatAction",
@@ -222,6 +241,24 @@ get_admin()
 redis:set("botBOT-IDstart", true)
 function tdcli_update_callback(data)
     if data.ID == "UpdateNewMessage" then
+        if redis:get("botBOT-IDaddbots") then
+            if not redis:get("botBOT-IDapiadding") then
+                local groups = redis:smembers("botBOT-IDsupergroups")
+                local added = tonumber(redis:get("botBOT-IDapiadded")) or 0
+                local gpCount = redis:scard("botBOT-IDsupergroups")
+                for x,y in ipairs(groups) do
+                    if added == 0 or x > added then
+                        addBots(y)
+                        redis:set("botBOT-IDapiadded", x)
+                        redis:setex("botBOT-IDapiadding", 300, true)
+                        if x == gpCount then
+                            redis:del("botBOT-IDaddbots")
+                        end
+                        return
+                    end
+                end
+            end
+        end
         local maxfwd = redis:get("botBOT-IDmaxfwd") or 'false'
         local isfwd = redis:get("botBOT-IDisfwd") or 'false'
         print('maxfwd '.. maxfwd)
@@ -272,7 +309,7 @@ function tdcli_update_callback(data)
             if redis:scard("botswaitelinks") ~= 0 then
                 local links = redis:smembers("botswaitelinks")
                 for x,y in ipairs(links) do
-                    if x == 3 then redis:setex("botBOT-IDmaxlink", 300, true) return end
+                    if x == 3 then redis:setex("botBOT-IDmaxlink", 200, true) return end
                     tdcli_function({ID = "CheckChatInviteLink",invite_link_ = y},process_link, {link=y})
                 end
             end
@@ -502,7 +539,11 @@ function tdcli_update_callback(data)
                     redis:set("botBOT-IDfwdfrom_chat_id_", msg.chat_id_)
                     return send(msg.chat_id_, msg.id_, "<i>fwd with time limit started</i>")
                 elseif (text:match("^fwd panel$")) then
-                    return send(msg.chat_id_, msg.id_, 'sended: '..redis:get("botBOT-IDfwdsended").."\n all: "..redis:scard("botBOT-IDsupergroups") )
+                    local msg = 'error';
+                    if redis:get("botBOT-IDfwdsended") then
+                        msg = 'sended: '..redis:get("botBOT-IDfwdsended").."\n all: "..redis:scard("botBOT-IDsupergroups")
+                    end
+                    return send(msg.chat_id_, msg.id_, msg )
                 elseif (text:match("^(send to) (.*)$") and msg.reply_to_message_id_ ~= 0) then
                     local matches = text:match("^send to (.*)$")
                     local naji
@@ -576,9 +617,13 @@ function tdcli_update_callback(data)
                         end
                     end
                     return send(msg.chat_id_, msg.id_, "<i>added</i>")
-                elseif text:match('^add bots') then
+                elseif text:match('^start bots') then
                     sendtobot()
                     return send(msg.chat_id_, msg.id_, "<i>bots started</i>")
+                elseif text:match('^add bots') then
+                    redis:setex("botBOT-IDapiadding", 300, true)
+                    redis:set("botBOT-IDaddbots", true)
+                    return send(msg.chat_id_, msg.id_, "<i>adding bots process started</i>")
                 elseif text:match("^(help)$") then
                     local txt ='help: \n\n'..
                             'reload\n'..
@@ -592,7 +637,8 @@ function tdcli_update_callback(data)
                             '\n\nseen on | off 👁\n<i>on or of auto seen</i>'..
                             '\n\npanel\n<i>get bot panel</i>'..
                             '\n\nstate\n<i>get bot state</i>'..
-                            '\n\nadd bots\n<i>start api bots</i>'..
+                            '\n\nstart bots\n<i>start api bots</i>'..
+                            '\n\nadd bots\n<i>add api bots to super groups</i>'..
                             '\n\nsend to pv|gp|sgp\n<i>send reply message</i>'..
                             '\n\nsend to sgp text\n<i>send text to all sgp</i>'..
                             '\n\nset answer "text" answer\n<i>add a asnwer to auto answer list</i>'..
