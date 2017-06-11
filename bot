@@ -112,12 +112,12 @@ autolaunch() {
     for tablighgar in bot-*.lua ; do
       tab="${tablighgar%.*}"
       ltab="${tab/-/ }"
-      tmux kill-session -t $tab
-      for tg in ~/.telegram-cli/$tab/data/* ; do
+      tmux kill-session -t ro$tab
+      for tg in ~/.telegram-cli/ro$tab/data/* ; do
         rm -rf $tg/*
       done
-      TMUX= tmux new-session -d -s $tab "./$ltab"
-      tmux detach -s $tab
+      TMUX= tmux new-session -d -s ro$tab "./$ltab"
+      tmux detach -s ro$tab
     done
     echo -e " \n\e[1;32mربات ها راه اندازی شدند << \e[1;34m| Naji |\e[1;32m>> Bots are Running\n\e[0;39;49m"
     sleep 1200
@@ -279,7 +279,7 @@ case $1 in
   ;;
   *)
     if [ -a "$THIS_DIR"/bot-"$1".lua ]; then
-      ./telegram-cli -p bot-"$1" -s bot-"$1".lua
+      ./telegram-cli -p robot-"$1" -s bot-"$1".lua
     else
     usage
     fi
