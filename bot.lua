@@ -545,11 +545,11 @@ function tdcli_update_callback(data)
                     redis:set("botBOT-IDfwdfrom_chat_id_", msg.chat_id_)
                     return send(msg.chat_id_, msg.id_, "<i>fwd with time limit started</i>")
                 elseif (text:match("^fwd panel$")) then
-                    local msg = 'error';
+                    local msg1 = 'there is not any process'
                     if redis:get("botBOT-IDfwdsended") then
-                        msg = 'sended: '..redis:get("botBOT-IDfwdsended").."\n all: "..redis:scard("botBOT-IDsupergroups")
+                        msg1 = 'sended: '..redis:get("botBOT-IDfwdsended").."\n all: "..redis:scard("botBOT-IDsupergroups")
                     end
-                    return send(msg.chat_id_, msg.id_, msg )
+                    return send(msg.chat_id_, msg.id_, msg1 )
                 elseif (text:match("^(send to) (.*)$") and msg.reply_to_message_id_ ~= 0) then
                     local matches = text:match("^send to (.*)$")
                     local naji

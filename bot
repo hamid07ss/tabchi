@@ -131,8 +131,8 @@ clear() {
   >> Inter the BOT-ID,that you wanna delete :
 '
   read -rp ' ' ID
-  rm -rf ~/.telegram-cli/bot-"$ID"/data
-  rm -rf bot-"$ID".lua
+  rm -rf ~/.telegram-cli/robot-"$ID"/data
+  rm -rf robot-"$ID".lua
   redis-cli --raw keys "bot"$ID* | xargs redis-cli del
   prtgrn '
      ربات شماره '$ID' با موفقیت حذف شد <<
