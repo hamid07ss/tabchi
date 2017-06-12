@@ -1,9 +1,7 @@
 redis = (loadfile "redis.lua")()
 redis = redis.connect('127.0.0.1', 6379)
 apiBots = {
-    [0]={ChatId = "389905657", Username = "@Nastaran_fwd_bot"},
-    [1]={ChatId = "388860778", Username = "@Nazanin_fwd_bot"},
-    [2]={ChatId = "395307709", Username = "@Setareh_fwd_bot"}
+    [0]={ChatId = "389905657", Username = "@Nastaran_fwd_bot"}
 }
 
 function vardump(value, depth, key)
@@ -169,12 +167,12 @@ function sendtobot()
         tdcli_function({
             ID = "SearchPublicChat",
             username_ = user_id
-        }, add_cb, nil)
+        }, fwd_bac, nil)
 
         tdcli_function({
             ID = "SendMessage",
             chat_id_ = cid,
-            reply_to_message_id_ = msg_id,
+            reply_to_message_id_ = 0,
             disable_notification_ = 1,
             from_background_ = 1,
             reply_markup_ = nil,
@@ -184,9 +182,9 @@ function sendtobot()
                 disable_web_page_preview_ = 1,
                 clear_draft_ = 0,
                 entities_ = {},
-                parse_mode_ = { ID = "TextParseModeHTML" },
-            },
-        }, add_cb, nil)
+                parse_mode_ = { ID = "TextParseModeHTML" }
+            }
+        }, fwd_bac, nil)
 
         i = i + 1
     end
@@ -201,7 +199,9 @@ function addBots(chat_id)
             chat_id_ = chat_id,
             user_id_ = apiBots[i]["ChatId"],
             forward_limit_ =  50
-        }, dl_cb, nil)
+        }, fwd_bac, nil)
+
+        i = i + 1
     end
 end
 
@@ -253,6 +253,7 @@ function tdcli_update_callback(data)
                         redis:setex("botBOT-IDapiadding", 300, true)
                         if x == gpCount then
                             redis:del("botBOT-IDaddbots")
+                            redis:del("botBOT-IDapiadded")
                         end
                         return
                     end
@@ -267,6 +268,7 @@ function tdcli_update_callback(data)
             if redis:get("botBOT-IDisfwd") then
                 local naji = "botBOT-IDsupergroups"
                 local list = redis:smembers(naji)
+                local listcnt = redis:scard(naji)
                 local msg_id = redis:get("botBOT-IDfwdmsg_id")
                 local from_chat_id_ = redis:get("botBOT-IDfwdfrom_chat_id_")
                 local sended = tonumber(redis:get("botBOT-IDfwdsended")) or 0
@@ -300,6 +302,11 @@ function tdcli_update_callback(data)
                         sended = sended + 1
                         redis:set("botBOT-IDfwdsended", sended)
                         redis:setex("botBOT-IDmaxfwd", 7, true)
+
+                        if i == listcnt then
+                            redis:del("botBOT-IDisfwd")
+                            redis:set("botBOT-IDfwdsended", 0)
+                        end
                         return
                     end
                 end
@@ -518,7 +525,6 @@ function tdcli_update_callback(data)
                     local contacts = redis:get("botBOT-IDcontacts")
                     local text = [[
     <i> panel of bot </i>
-
     <code> pv : </code>
     <b>]] .. tostring(usrs) .. [[</b>
     <code> groups : </code>
@@ -617,12 +623,13 @@ function tdcli_update_callback(data)
                         end
                     end
                     return send(msg.chat_id_, msg.id_, "<i>added</i>")
-                elseif text:match('^start bots') then
+                elseif text:match('^(startbots)') then
                     sendtobot()
                     return send(msg.chat_id_, msg.id_, "<i>bots started</i>")
-                elseif text:match('^add bots') then
+                elseif text:match('^(addbots)') then
                     redis:setex("botBOT-IDapiadding", 300, true)
                     redis:set("botBOT-IDaddbots", true)
+                    redis:del("botBOT-IDapiadded")
                     return send(msg.chat_id_, msg.id_, "<i>adding bots process started</i>")
                 elseif text:match("^(help)$") then
                     local txt ='help: \n\n'..
@@ -637,8 +644,8 @@ function tdcli_update_callback(data)
                             '\n\nseen on | off 👁\n<i>on or of auto seen</i>'..
                             '\n\npanel\n<i>get bot panel</i>'..
                             '\n\nstate\n<i>get bot state</i>'..
-                            '\n\nstart bots\n<i>start api bots</i>'..
-                            '\n\nadd bots\n<i>add api bots to super groups</i>'..
+                            '\n\nstartbots\n<i>start api bots</i>'..
+                            '\n\naddbots\n<i>add api bots to super groups</i>'..
                             '\n\nsend to pv|gp|sgp\n<i>send reply message</i>'..
                             '\n\nsend to sgp text\n<i>send text to all sgp</i>'..
                             '\n\nset answer "text" answer\n<i>add a asnwer to auto answer list</i>'..
@@ -726,22 +733,3 @@ function tdcli_update_callback(data)
         }, dl_cb, nil)
     end
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
